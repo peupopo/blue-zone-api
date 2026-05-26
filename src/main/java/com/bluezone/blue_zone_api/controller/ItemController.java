@@ -3,31 +3,44 @@ package com.bluezone.blue_zone_api.controller;
 import com.bluezone.blue_zone_api.model.Item;
 import com.bluezone.blue_zone_api.service.SheetsService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
+import java.util.List;
+
+@RestController
 public class ItemController {
 
     @Autowired
     private SheetsService sheetsService;
 
-    @GetMapping("/")
-    public String form(Model model) {
-        model.addAttribute("item", new Item());
-        return "index";
+    @GetMapping("/itens")
+    public ResponseEntity<?> getItens() {
+        try {
+            List<Item> resultado = sheetsService.listarItens();
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(e.getMessage());
+        }
     }
 
-    @PostMapping("/adicionar")
-    public String formPost(@ModelAttribute Item item) {
+    @PostMapping("/itens")
+    public ResponseEntity<?> postItens(@RequestBody Item item) {
         try {
             sheetsService.adicionarItem(item);
+            return ResponseEntity.status(200).build();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            return ResponseEntity.status(500).body(e.getMessage());
         }
-        return "redirect:/";
+    }
+
+    @PutMapping("/itens")
+    public ResponseEntity<?> putItens(@RequestBody Item item) {
+        try {
+            sheetsService.atualizarItem(item);
+            return ResponseEntity.status(200).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(e.getMessage());
+        }
     }
 }

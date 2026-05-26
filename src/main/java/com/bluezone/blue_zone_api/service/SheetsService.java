@@ -61,7 +61,7 @@ public class SheetsService {
         for(int i = 1; i < linhas.size(); i++) {
             List<Object> linha = linhas.get(i);
             Item item = new Item();
-            item.setCategoriaPrincipal(getCell(linha, 1));
+            item.setCategoriaPrincipal(getCell(linha, 0));
             item.setSubcategoria(getCell(linha, 1));
             item.setItem(getCell(linha, 2));
             item.setControlado(getCell(linha, 3));
