@@ -1,0 +1,19 @@
+# Build
+target/
+*.class
+*.jar
+*.war
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# CREDENCIAIS
+.env
+.env.*
+application-local.properties
+application-secret.properties
+
+# Google credentials
+src/main/resources/credentials.json
