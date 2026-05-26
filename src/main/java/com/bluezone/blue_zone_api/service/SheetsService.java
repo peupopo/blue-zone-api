@@ -10,6 +10,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -27,10 +28,16 @@ public class SheetsService {
     private String sheetId;
 
     private Sheets criarClienteSheets() throws Exception {
-        InputStream credentialsStream = getClass()
-                .getClassLoader()
-                .getResourceAsStream(credentialsPath);
+        String credentialsJson = System.getenv("GOOGLE_CREDENTIALS_JSON");
 
+        InputStream credentialsStream;
+        if (credentialsJson != null) {
+            credentialsStream = new ByteArrayInputStream(credentialsJson.getBytes());
+        } else {
+            credentialsStream = getClass()
+                    .getClassLoader()
+                    .getResourceAsStream(credentialsPath);
+        }
         GoogleCredentials credentials = GoogleCredentials
                 .fromStream(credentialsStream)
                 .createScoped("https://www.googleapis.com/auth/spreadsheets");
