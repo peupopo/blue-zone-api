@@ -43,4 +43,14 @@ public class ItemController {
             return ResponseEntity.status(500).body(e.getMessage());
         }
     }
+
+    @GetMapping("/alertas")
+    public ResponseEntity<?> getAlertas() {
+        try {
+            List<Item> resultado = sheetsService.listarAlertas();
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(e.getMessage());
+        }
+    }
 }

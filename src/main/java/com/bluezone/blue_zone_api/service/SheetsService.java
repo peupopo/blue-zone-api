@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -140,5 +143,43 @@ public class SheetsService {
                 .update(sheetId, range, corpo)
                 .setValueInputOption("USER_ENTERED")
                 .execute();
+    }
+
+    public List<Item> listarAlertas() throws Exception {
+        List<Item> itens = listarItens();
+        List<Item> alertas = new ArrayList<>();
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+        for (Item item : itens) {
+            boolean estoqueMinimoBaixo = false;
+            boolean venceEmBreve = false;
+
+            if (!item.getQuantidade().isEmpty() && !item.getEstoqueMinimo().isEmpty()) {
+                try {
+                    int qtd = Integer.parseInt(item.getQuantidade());
+                    int min = Integer.parseInt(item.getEstoqueMinimo());
+                    if (qtd < min) estoqueMinimoBaixo = true;
+                } catch (NumberFormatException e) {
+                    // ignora celula c texto invalido
+                }
+            }
+
+            if (!item.getDataVencimento().isEmpty()) {
+                try {
+                    LocalDate vencimento = LocalDate.parse(item.getDataVencimento(), fmt);
+                    long diasRestantes = ChronoUnit.DAYS.between(LocalDate.now(), vencimento);
+                    if (diasRestantes <= 30) venceEmBreve = true;
+                } catch (Exception e) {
+                    // ignora data em formato inesperado
+                }
+            }
+
+            if (estoqueMinimoBaixo || venceEmBreve) {
+                alertas.add(item);
+            }
+        }
+
+        return alertas;
     }
 }
