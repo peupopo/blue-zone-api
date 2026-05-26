@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -22,7 +23,7 @@ public class SheetsService {
     @Value("${google.sheet.id}")
     private String sheetId;
 
-    public void adicionarItem(Item item) throws Exception {
+    private Sheets criarClienteSheets() throws Exception {
         InputStream credentialsStream = getClass()
                 .getClassLoader()
                 .getResourceAsStream(credentialsPath);
@@ -31,21 +32,113 @@ public class SheetsService {
                 .fromStream(credentialsStream)
                 .createScoped("https://www.googleapis.com/auth/spreadsheets");
 
-        Sheets sheetsClient = new Sheets.Builder(
+        return new Sheets.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 GsonFactory.getDefaultInstance(),
                 new HttpCredentialsAdapter(credentials)
-        ).setApplicationName("bluezone-teste").build();
+        ).setApplicationName("blue-zone-api").build();
+    }
 
-        List<List<Object>> valores = List.of(
-                List.of(item.getNome(), item.getQuantidade())
-        );
+    private String getCell(List<Object> row, int index) {
+        if (row.size() > index && row.get(index) != null) {
+            return row.get(index).toString();
+        }
+        return "";
+    }
+
+    public List<Item> listarItens() throws Exception {
+        Sheets sheetsClient = criarClienteSheets();
+
+        List<List <Object>> linhas = sheetsClient.spreadsheets().values()
+                .get(sheetId, "Estoque Geral!A:J")
+                .execute()
+                .getValues();
+
+        List<Item> itens = new ArrayList<>();
+
+        if (linhas == null) return itens;
+
+        for(int i = 1; i < linhas.size(); i++) {
+            List<Object> linha = linhas.get(i);
+            Item item = new Item();
+            item.setCategoriaPrincipal(getCell(linha, 1));
+            item.setSubcategoria(getCell(linha, 1));
+            item.setItem(getCell(linha, 2));
+            item.setControlado(getCell(linha, 3));
+            item.setQuantidade(getCell(linha, 4));
+            item.setEstoqueMinimo(getCell(linha, 5));
+            item.setDataVencimento(getCell(linha, 6));
+            item.setStatus(getCell(linha, 7));
+            item.setObservacoes(getCell(linha, 8));
+            item.setUltimaAtualizacao(getCell(linha, 9));
+            itens.add(item);
+        }
+
+        return itens;
+    }
+
+    public void adicionarItem(Item item) throws Exception {
+        Sheets sheetsClient = criarClienteSheets();
+
+        List<List<Object>> valores = List.of(List.of(
+                item.getCategoriaPrincipal(),
+                item.getSubcategoria(),
+                item.getItem(),
+                item.getControlado(),
+                item.getQuantidade(),
+                item.getEstoqueMinimo(),
+                item.getDataVencimento(),
+                item.getStatus(),
+                item.getObservacoes(),
+                item.getUltimaAtualizacao()
+        ));
 
         ValueRange corpo = new ValueRange().setValues(valores);
 
         sheetsClient.spreadsheets().values()
-                .append(sheetId, "Página1!A:B", corpo)
-                .setValueInputOption("RAW")
+                .append(sheetId, "Estoque Geral!A:J", corpo)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+    }
+
+    public void atualizarItem(Item item) throws Exception {
+        Sheets sheetsClient = criarClienteSheets();
+
+        List<List<Object>> linhas = sheetsClient.spreadsheets().values()
+                .get(sheetId, "Estoque Geral!A:J")
+                .execute()
+                .getValues();
+
+        int numeroLinha = -1;
+        for (int i = 1; i < linhas.size(); i++) {
+            if (getCell(linhas.get(i), 2).equals(item.getItem())) {
+                numeroLinha = i + 1; // sheets eh 1-indexed
+                break;
+            }
+        }
+
+        if (numeroLinha == -1) throw new Exception("Item não encontrado: " + item.getItem());
+
+        String range = "Estoque Geral!A" + numeroLinha + ":J" + numeroLinha;
+
+        List<List<Object>> valores = List.of(List.of(
+                item.getCategoriaPrincipal(),
+                item.getSubcategoria(),
+                item.getItem(),
+                item.getControlado(),
+                item.getQuantidade(),
+                item.getEstoqueMinimo(),
+                item.getDataVencimento(),
+                item.getStatus(),
+                item.getObservacoes(),
+                item.getUltimaAtualizacao()
+        ));
+
+        ValueRange corpo = new ValueRange().setValues(valores);
+
+        sheetsClient.spreadsheets().values()
+                .update(sheetId, range, corpo)
+                .setValueInputOption("USER_ENTERED")
                 .execute();
     }
 }
