@@ -58,7 +58,7 @@ public class SheetsService {
 
         if (linhas == null) return itens;
 
-        for(int i = 1; i < linhas.size(); i++) {
+        for(int i = 2; i < linhas.size(); i++) {
             List<Object> linha = linhas.get(i);
             Item item = new Item();
             item.setCategoriaPrincipal(getCell(linha, 0));
@@ -110,9 +110,9 @@ public class SheetsService {
                 .getValues();
 
         int numeroLinha = -1;
-        for (int i = 1; i < linhas.size(); i++) {
+        for (int i = 2; i < linhas.size(); i++) {
             if (getCell(linhas.get(i), 2).equals(item.getItem())) {
-                numeroLinha = i + 1; // sheets eh 1-indexed
+                numeroLinha = i + 1;
                 break;
             }
         }
