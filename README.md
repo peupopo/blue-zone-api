@@ -27,6 +27,49 @@ Todos os pedidos começam com esse endereço.
 
 ---
 
+## Autenticação — API Key
+
+A API é protegida por uma chave secreta. **Todo request precisa mandar essa chave**, senão a API rejeita com erro `401 Unauthorized`.
+
+**A chave:** peçam para o Pedro — ele vai passar no grupo.
+
+### Como configurar — faça isso uma vez só
+
+Crie um arquivo chamado `api.js` na raiz do projeto. Todos os exemplos desse guia usam esse arquivo:
+
+```javascript
+// api.js
+const BASE_URL = 'https://blue-zone-api.onrender.com';
+const API_KEY = 'chave-que-o-pedro-vai-passar';
+
+export const apiFetch = async (endpoint, options = {}) => {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': API_KEY,
+            ...options.headers,
+        },
+    });
+    return response;
+};
+```
+
+Depois, em vez de `fetch(url)` direto, usem sempre `apiFetch('/endpoint')`:
+
+```javascript
+// ❌ Sem autenticação — vai dar 401:
+const response = await fetch('https://blue-zone-api.onrender.com/itens');
+
+// ✅ Com autenticação — modo correto:
+import { apiFetch } from './api';
+const response = await apiFetch('/itens');
+```
+
+> ⚠️ **Não commitem a chave no GitHub.** Guardem ela num arquivo `.env` e adicionem esse arquivo no `.gitignore`. Se não souberem fazer isso, falem com o Pedro.
+
+---
+
 ## O objeto Item — o que é e quais campos tem
 
 Tudo no inventário é um **Item**. Quando a API te mandar um item, ou quando você mandar um item para a API, ele sempre vai ter essa estrutura:
@@ -61,7 +104,7 @@ Tudo no inventário é um **Item**. Quando a API te mandar um item, ou quando vo
 | `observacoes` | Qualquer anotação livre | `"Lote 2024"` |
 | `ultimaAtualizacao` | Calculado automaticamente | sempre mande `""` |
 
-### Regras que vocês precisam seguir
+### Regras que vocês precisam seguir (pra não quebrar o modo que o Google faz planilhas)
 
 **O campo `item` é o mais importante.** É com ele que a API sabe qual produto editar. Se mandarem o nome errado ou com um espaço a mais, vai dar erro.
 
@@ -136,8 +179,10 @@ Usem **exatamente** esses textos — acento, maiúscula, tudo igual. A API é se
 **Quando usar:** ao carregar a tela de Estoque.
 
 ```javascript
+import { apiFetch } from './api';
+
 const buscarItens = async () => {
-    const response = await fetch('https://blue-zone-api.onrender.com/itens');
+    const response = await apiFetch('/itens');
     const itens = await response.json();
     return itens; // array com todos os itens
 };
@@ -152,8 +197,10 @@ const buscarItens = async () => {
 **Quando usar:** na tela inicial (Home), para mostrar os itens críticos (como ta agr).
 
 ```javascript
+import { apiFetch } from './api';
+
 const buscarAlertas = async () => {
-    const response = await fetch('https://blue-zone-api.onrender.com/alertas');
+    const response = await apiFetch('/alertas');
     const alertas = await response.json();
     return alertas; // só os itens que estão em situação crítica
 };
@@ -175,6 +222,8 @@ const totalAlertas = alertas.length; // ex: 2
 **Quando usar:** quando o usuário preencher o formulário de "Adicionar produto" e apertar Salvar.
 
 ```javascript
+import { apiFetch } from './api';
+
 const adicionarItem = async (dadosDoFormulario) => {
     const novoItem = {
         categoriaPrincipal: dadosDoFormulario.categoria,
@@ -189,9 +238,8 @@ const adicionarItem = async (dadosDoFormulario) => {
         ultimaAtualizacao: ""
     };
 
-    const response = await fetch('https://blue-zone-api.onrender.com/itens', {
+    const response = await apiFetch('/itens', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(novoItem)
     });
 
@@ -213,13 +261,14 @@ const adicionarItem = async (dadosDoFormulario) => {
 > ⚠️ **Atenção:** para editar, vocês precisam mandar o objeto **completo**, não só o campo que mudou. A API substitui a linha inteira na planilha. Então o fluxo correto é: buscar o item → alterar o campo → mandar tudo de volta.
 
 ```javascript
+import { apiFetch } from './api';
+
 const editarItem = async (itemCompleto) => {
     // itemCompleto é o objeto do item que vocês já têm,
     // com o campo que mudou já atualizado
 
-    const response = await fetch('https://blue-zone-api.onrender.com/itens', {
+    const response = await apiFetch('/itens', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(itemCompleto)
     });
 
@@ -283,20 +332,23 @@ if (itemEstaEmAlerta(item)) {
 Sempre verifiquem se a resposta deu certo antes de continuar. A API devolve:
 
 - **Status 200** → deu certo
+- **Status 401** → API Key errada ou esqueceram de mandar
 - **Status 500** → algo deu errado, o corpo da resposta tem a mensagem de erro em texto
 
 ```javascript
-const response = await fetch('https://blue-zone-api.onrender.com/itens', {
+import { apiFetch } from './api';
+
+const response = await apiFetch('/itens', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(item)
 });
 
 if (response.ok) {
     // sucesso — atualiza a tela
+} else if (response.status === 401) {
+    Alert.alert('Erro', 'Chave de API inválida. Fala com o Pedro.');
 } else {
     const mensagemDeErro = await response.text();
-    // mostra mensagem para o usuário
     Alert.alert('Erro', mensagemDeErro);
 }
 ```
@@ -307,6 +359,7 @@ if (response.ok) {
 
 ```javascript
 import { useEffect, useState } from 'react';
+import { apiFetch } from './api';
 
 const TelaEstoque = () => {
     const [itens, setItens] = useState([]);
@@ -318,7 +371,7 @@ const TelaEstoque = () => {
 
     const carregarItens = async () => {
         setCarregando(true);
-        const response = await fetch('https://blue-zone-api.onrender.com/itens');
+        const response = await apiFetch('/itens');
         const data = await response.json();
         setItens(data);
         setCarregando(false);
