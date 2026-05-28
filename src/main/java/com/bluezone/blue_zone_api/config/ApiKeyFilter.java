@@ -23,6 +23,9 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            response.setHeader("Access-Control-Allow-Origin", "*");
+            response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            response.setHeader("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization");
             response.setStatus(HttpServletResponse.SC_OK);
             return;
         }
@@ -32,6 +35,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         if (apiKey.equals(keyRecebida)) {
             filterChain.doFilter(request, response);
         } else {
+            response.setHeader("Access-Control-Allow-Origin", "*");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("API Key inválida");
         }
